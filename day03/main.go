@@ -71,8 +71,10 @@ func checkSlope(input []string, right, down int) int {
 	trees := 0
 	for x, y := 0, 0; y < len(input); x, y = x+right, y+down {
 		line := input[y]
-		idx := x % len(line)
-		if line[idx] == '#' {
+		if x >= len(line) {
+			x -= len(line)
+		}
+		if line[x] == '#' {
 			trees++
 		}
 	}
