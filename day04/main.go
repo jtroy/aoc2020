@@ -10,6 +10,22 @@ import (
 	"time"
 )
 
+func scanRecords(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := strings.Index(string(data), "\n\n"); i >= 0 {
+		// We have a full newline-terminated line.
+		return i + 1, data[0:i], nil
+	}
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+	// Request more data.
+	return 0, nil, nil
+}
+
 func readInput(filename string) ([]string, error) {
 	f, err := os.Open(filename)
 	if err != nil {
@@ -17,6 +33,7 @@ func readInput(filename string) ([]string, error) {
 	}
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
+	scanner.Split(scanRecords)
 	var lines []string
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
@@ -67,24 +84,14 @@ func main() {
 func doPart1(lines []string) (int, time.Duration) {
 	start := time.Now()
 	var (
-		fields int
-		hasCid bool
-		count  int
+		count int
 	)
 	for _, line := range lines {
-		if len(line) == 0 {
-			if fields == 8 || (fields == 7 && !hasCid) {
-				count++
-			}
-			fields = 0
-			hasCid = false
-			continue
+		fields := strings.Count(line, ":")
+		hasCid := strings.Contains(line, "cid")
+		if fields == 8 || (fields == 7 && !hasCid) {
+			count++
 		}
-		fields += strings.Count(line, ":")
-		hasCid = hasCid || strings.Contains(line, "cid")
-	}
-	if fields == 8 || (fields == 7 && !hasCid) {
-		count++
 	}
 	return count, time.Since(start)
 }
@@ -148,33 +155,17 @@ func validLine(line string) bool {
 func doPart2(lines []string) (int, time.Duration) {
 	start := time.Now()
 	var (
-		fields  int
-		hasCid  bool
-		isValid = true
-		count   int
+		count int
 	)
 	for _, line := range lines {
-		if len(line) == 0 {
-			if isValid && (fields == 8 || (fields == 7 && !hasCid)) {
-				count++
-			}
-			fields = 0
-			hasCid = false
-			isValid = true
-			continue
-		}
-		if !isValid {
-			continue
-		}
 		if !validLine(line) {
-			isValid = false
-			//continue
+			continue
 		}
-		fields += strings.Count(line, ":")
-		hasCid = hasCid || strings.Contains(line, "cid")
-	}
-	if isValid && (fields == 8 || (fields == 7 && !hasCid)) {
-		count++
+		fields := strings.Count(line, ":")
+		hasCid := strings.Contains(line, "cid")
+		if fields == 8 || (fields == 7 && !hasCid) {
+			count++
+		}
 	}
 	return count, time.Since(start)
 }
